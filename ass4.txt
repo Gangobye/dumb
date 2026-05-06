@@ -1,0 +1,62 @@
+import random
+
+class Node:
+    def __init__(self, node_id, clock_time):
+        self.node_id = node_id
+        self.clock_time = clock_time
+
+    def get_time(self):
+        return self.clock_time
+
+    def adjust_time(self, offset):
+        self.clock_time += offset
+
+    def __repr__(self):
+        return f"Node {self.node_id}: {self.clock_time:.2f} sec"
+
+
+class Coordinator(Node):
+    def synchronize_clocks(self, nodes):
+        print("Polling times from all nodes...")
+        times = {}
+
+        for node in nodes:
+            if node.node_id == self.node_id:
+                continue
+            delay = random.uniform(0.1, 0.5)
+            node_time = node.get_time() + delay / 2 
+            times[node.node_id] = node_time - self.clock_time
+            print(f"Node {node.node_id} time: {node.get_time():.2f}, adjusted for delay: {node_time:.2f}")
+
+        times[self.node_id] = 0.0
+
+        average_offset = sum(times.values()) / len(times)
+        print(f"\nCalculated average offset: {average_offset:.2f} seconds")
+
+        for node in nodes:
+            offset = average_offset - times[node.node_id]
+            node.adjust_time(offset)
+            print(f"Adjusting Node {node.node_id} by {offset:+.2f} seconds")
+
+        print("\nSynchronization complete.\n")
+
+
+if __name__ == "__main__":
+    nodes = [
+        Coordinator(0, 100.0),
+        Node(1, 102.0),
+        Node(2, 98.5),
+        Node(3, 101.2),
+        Node(4, 99.8),
+    ]
+
+    print("Initial times:")
+    for node in nodes:
+        print(node)
+
+    coordinator = nodes[0]
+    coordinator.synchronize_clocks(nodes)
+
+    print("Final times after synchronization:")
+    for node in nodes:
+        print(node)
