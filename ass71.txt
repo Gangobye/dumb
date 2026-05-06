@@ -1,0 +1,119 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI()
+
+# Enable CORS (safe even if same server)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# In-memory database
+products = []
+
+class Product(BaseModel):
+    id: int
+    name: str
+    price: float
+
+# Serve frontend
+@app.get("/")
+def serve_frontend():
+    return FileResponse("index.html")
+
+# Get all products
+@app.get("/products", response_model=List[Product])
+def get_products():
+    return products
+
+# Add product
+@app.post("/products")
+def add_product(product: Product):
+    products.append(product)
+    return {"message": "Product added"}
+
+# Delete product
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int):
+    global products
+    products = [p for p in products if p.id != product_id]
+    return {"message": "Product deleted"}
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product Management</title>
+</head>
+<body>
+
+<h2>Product Management</h2>
+
+<input id="id" placeholder="ID" />
+<input id="name" placeholder="Name" />
+<input id="price" placeholder="Price" />
+<button onclick="addProduct()">Add Product</button>
+
+<h3>Products</h3>
+<ul id="productList"></ul>
+
+<script>
+const API_URL = "/products";  // IMPORTANT: no localhost now
+
+async function fetchProducts() {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    const list = document.getElementById("productList");
+    list.innerHTML = "";
+
+    data.forEach(p => {
+        const li = document.createElement("li");
+        li.innerHTML = `${p.id} - ${p.name} - ₹${p.price}
+        <button onclick="deleteProduct(${p.id})">Delete</button>`;
+        list.appendChild(li);
+    });
+}
+
+async function addProduct() {
+    const id = document.getElementById("id").value;
+    const name = document.getElementById("name").value;
+    const price = document.getElementById("price").value;
+
+    await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: Number(id),
+            name: name,
+            price: Number(price)
+        })
+    });
+
+    fetchProducts();
+}
+
+async function deleteProduct(id) {
+    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    fetchProducts();
+}
+
+// Load products on page load
+fetchProducts();
+</script>
+
+</body>
+</html>
+
+
+pip install fastapi uvicorn
+uvicorn main:app --reload
